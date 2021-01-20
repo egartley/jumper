@@ -30,7 +30,7 @@ public class Game extends StateBasedGame implements InputProviderListener {
     /**
      * Whether or not to perform debug related operations
      */
-    public static boolean debug = true;
+    public static boolean debug = false;
 
     public static Input input;
 

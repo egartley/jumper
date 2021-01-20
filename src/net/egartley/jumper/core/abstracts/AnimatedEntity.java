@@ -32,9 +32,15 @@ public abstract class AnimatedEntity extends Entity {
     }
 
     public AnimatedEntity(String id, SpriteSheet sheet) {
+        this(id, sheet, true);
+    }
+
+    public AnimatedEntity(String id, SpriteSheet sheet, boolean setAnimations) {
         super(id, sheet);
         isAnimated = true;
-        setAnimations();
+        if (setAnimations) {
+            setAnimations();
+        }
     }
 
     /**

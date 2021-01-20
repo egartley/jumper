@@ -32,9 +32,7 @@ public class InGameState extends BasicGameState {
     public static void onPlayerDeath() {
         isDead = true;
         Collisions.nuke();
-        if (board.highScore < board.score) {
-            board.highScore = board.score;
-        }
+        board.highScore = Math.max(board.highScore, board.score);
     }
 
     private void deathScreen(Graphics graphics) {
@@ -56,7 +54,7 @@ public class InGameState extends BasicGameState {
 
     private void drawScore(Graphics graphics) {
         graphics.setColor(Color.black);
-        graphics.fillRect(0, 0, 100, 32);
+        graphics.fillRect(0, 0, 64, 32);
         graphics.setColor(Color.white);
         graphics.setFont(scoreFont);
         graphics.drawString(String.valueOf(board.score), 8, 2);

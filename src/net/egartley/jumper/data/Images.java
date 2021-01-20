@@ -9,7 +9,11 @@ import java.io.File;
 
 public class Images {
 
-    public final static byte PLAYER = 0;
+    public static final byte LEFT_FALLING = 0;
+    public static final byte RIGHT_FALLING = 1;
+    public static final byte LEFT_RISING = 2;
+    public static final byte RIGHT_RISING = 3;
+    public static final byte SQUISH = 4;
 
     public static String path = "resources/images/";
     public static String entityPath = path + "entities/";
@@ -19,8 +23,16 @@ public class Images {
      */
     public static Image get(byte image) {
         switch (image) {
-            case PLAYER:
-                return get(entityPath + "player-default.png");
+            case LEFT_FALLING:
+                return get(entityPath + "fall-left.png");
+            case RIGHT_FALLING:
+                return get(entityPath + "fall-right.png");
+            case LEFT_RISING:
+                return get(entityPath + "rising-left.png");
+            case RIGHT_RISING:
+                return get(entityPath + "rising-right.png");
+            case SQUISH:
+                return get(entityPath + "squish.png");
             default:
                 return get(path + "unknown.png");
         }

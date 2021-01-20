@@ -15,24 +15,34 @@ import net.egartley.jumper.core.threads.DelayedEvent;
 import net.egartley.jumper.data.Images;
 import net.egartley.jumper.gamestates.InGameState;
 import org.newdawn.slick.Animation;
+import org.newdawn.slick.Graphics;
 import org.newdawn.slick.Input;
 
 public class Player extends AnimatedEntity {
 
-    private final byte LEFT_ANIMATION = 0;
-    private final byte RIGHT_ANIMATION = 1;
-    private final int ANIMATION_THRESHOLD = 165;
+    private final byte RIGHT_FALLING = 0;
+    private final byte LEFT_FALLING = 1;
+    private final byte LEFT_RISING = 2;
+    private final byte RIGHT_RISING = 3;
+    private final byte SQUISH = 4;
+    private final int ANIMATION_THRESHOLD = 100;
 
     public int fallSpeed = 0, maxFallSpeedUp = 4, maxFallSpeedDown = 6;
     private int landingPoint, jumpHeight = 72;
     private double downAcc = 0.0625D, upAcc = 0.05D, fallControl= 0D, maxControl = Math.PI / 2D;
-    public boolean isFalling = true;
+    public boolean isFalling = true, isSquished = false;
 
+    private Platform lastPlatform;
     public EntityBoundary boundary;
 
     public Player() {
-        super("Player", new SpriteSheet(Images.get(Images.PLAYER), 30, 44, 2, 4));
-        speed = 4D;
+        super("Player", new SpriteSheet(Images.get(Images.RIGHT_FALLING), 31, 27, 1, 1), false);
+        sprites.add(new SpriteSheet(Images.get(Images.LEFT_FALLING), 31, 27, 1, 1).getSprite(0));
+        sprites.add(new SpriteSheet(Images.get(Images.LEFT_RISING), 31, 27, 1, 1).getSprite(0));
+        sprites.add(new SpriteSheet(Images.get(Images.RIGHT_RISING), 31, 27, 1, 1).getSprite(0));
+        sprites.add(new SpriteSheet(Images.get(Images.SQUISH), 31, 27, 1, 6).getSprite(0));
+        setAnimations();
+        speed = 3D;
     }
 
     public void addPlatformCollision(Platform platform) {
@@ -63,23 +73,33 @@ public class Player extends AnimatedEntity {
 
     public void onPlatformLand(Platform platform) {
         if (!isFalling) {
+            // rising, so don't do anything
             return;
         }
-        isFalling = false;
-        landingPoint = platform.y();
-        resetFallSpeed();
+        lastPlatform = platform;
+        isSquished = true;
+        animation.start();
+        new DelayedEvent(0.095) {
+            @Override
+            public void onFinish() {
+                isFalling = false;
+                isSquished = false;
+                animation.stop();
+                landingPoint = platform.y();
+                resetFallSpeed();
+            }
+        }.start();
     }
 
     @Override
     public void setAnimations() {
-        animations.add(new Animation(Util.getAnimationFrames(sprites.get(0)), ANIMATION_THRESHOLD));
-        animations.add(new Animation(Util.getAnimationFrames(sprites.get(1)), ANIMATION_THRESHOLD));
+        animations.add(new Animation(Util.getAnimationFrames(sprites.get(SQUISH)), ANIMATION_THRESHOLD));
         animation = animations.get(0);
     }
 
     @Override
     public void setBoundaries() {
-        boundary = new EntityBoundary(this, sprite, new BoundaryPadding(3, 0, 1, 0));
+        boundary = new EntityBoundary(this, sprite, new BoundaryPadding(2, 0, 0, 0));
         boundary.name = "Base";
         defaultBoundary = boundary;
         boundaries.add(boundary);
@@ -106,20 +126,37 @@ public class Player extends AnimatedEntity {
     }
 
     @Override
+    public void render(Graphics graphics) {
+        if (isSquished) {
+            animation.draw(x(), y());
+        } else {
+            graphics.drawImage(sprite.asImage(), x(), y());
+        }
+        if (Game.debug) {
+            drawDebug(graphics);
+        }
+    }
+
+    @Override
     public void tick() {
         boolean left = Keyboard.isPressed(Input.KEY_A);
         boolean right = Keyboard.isPressed(Input.KEY_D);
-        if (left) {
-            move(DIRECTION_LEFT);
-            if (animation.equals(animations.get(RIGHT_ANIMATION))) {
-                animation = animations.get(LEFT_ANIMATION);
-                animation.stop();
+        if (!isSquished) {
+            if (!isFalling) {
+                sprite = sprites.get(sprite.equals(sprites.get(LEFT_FALLING)) ? LEFT_RISING : RIGHT_RISING);
+            } else {
+                sprite = sprites.get(sprite.equals(sprites.get(LEFT_RISING)) ? LEFT_FALLING : RIGHT_FALLING);
             }
-        } else if (right) {
-            move(DIRECTION_RIGHT);
-            if (animation.equals(animations.get(LEFT_ANIMATION))) {
-                animation = animations.get(RIGHT_ANIMATION);
-                animation.stop();
+            if (left) {
+                if (!sprite.equals(sprites.get(LEFT_FALLING)) && isFalling) {
+                    sprite = sprites.get(LEFT_FALLING);
+                }
+                move(DIRECTION_LEFT);
+            } else if (right) {
+                if (!sprite.equals(sprites.get(LEFT_FALLING)) && isFalling) {
+                    sprite = sprites.get(LEFT_FALLING);
+                }
+                move(DIRECTION_RIGHT);
             }
         }
         if (isFalling) {
@@ -144,7 +181,11 @@ public class Player extends AnimatedEntity {
         if (!isFalling) {
             i = -1;
         }
-        y(y() + fallSpeed * i);
+        if (!isSquished) {
+            y(y() + fallSpeed * i);
+        } else {
+            y(lastPlatform.y() - sprite.height);
+        }
         super.tick();
         if (y() + 1 > Game.WINDOW_HEIGHT) {
             // below visible, fell off
